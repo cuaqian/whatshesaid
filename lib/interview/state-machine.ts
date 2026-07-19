@@ -112,6 +112,21 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
   const userMessage = input.userMessage.trim();
   const allUserMessages = messages.filter((message) => message.role === "user").map((message) => message.content);
 
+  // 如果上一场已经结束，用户发任何消息就当作新对话重置
+  if (session.stage === "end") {
+    if (!userMessage) {
+      return { session, chat: response(session, END_TEXT, { ended: true }) };
+    }
+    // 重置会话
+    session.stage = "opening";
+    session.finalQuote = null;
+    session.quoteConfirmed = false;
+    session.followupCount = 0;
+    session.evidenceCount = 0;
+    session.referenceStep = 0;
+    // 接着走下面的 opening 分支
+  }
+
   if (session.stage === "end") {
     return { session, chat: response(session, END_TEXT, { ended: true }) };
   }
