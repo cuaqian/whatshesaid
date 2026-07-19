@@ -6,31 +6,19 @@ import type { UiMessage } from "@/types/message";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { QuoteConfirm } from "./QuoteConfirm";
-import { LoadingDots } from "@/components/ui/LoadingDots";
 
-const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么，只想听你讲一件你做过的事。你可以直接说话，也可以打字。我不会保存你的任何信息。可以吗？";
+const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
 const SESSION_KEY = "whatshesaid_session";
 
+const TOTAL_STAGES = 5;
 const STAGE_LABELS: Partial<Record<InterviewStage, string>> = {
-  opening: "开场",
-  story: "带回现场",
-  keyword_followup: "追问细节",
-  external_evidence: "被认可的证明",
-  reference_shift: "换个角度看自己",
-  quote_confirm: "把话说给你听",
-  mirror_back: "你已说出口",
-  end: "结束"
+  opening: "开场", story: "听你讲", keyword_followup: "追问",
+  external_evidence: "别人的眼睛", reference_shift: "换个尺子",
+  quote_confirm: "那句你说过的话", mirror_back: "听见自己", end: ""
 };
 
-const TOTAL_STAGES = 5;
-
 function stageToIndex(stage: InterviewStage): number {
-  const map: Partial<Record<InterviewStage, number>> = {
-    opening: 0, story: 1, keyword_followup: 1,
-    external_evidence: 2, reference_shift: 3,
-    quote_confirm: 4, mirror_back: 5, end: 5
-  };
-  return Math.min(map[stage] ?? 0, TOTAL_STAGES);
+  return ({ opening: 0, story: 1, keyword_followup: 1, external_evidence: 2, reference_shift: 3, quote_confirm: 4, mirror_back: 5, end: 5 } as Record<string, number>)[stage] ?? 0;
 }
 
 export function ChatWindow() {
@@ -47,88 +35,55 @@ export function ChatWindow() {
   const reset = useCallback(() => {
     setSessionId(null);
     setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
-    setEnded(false);
-    setStage("opening");
-    setQuoteCandidate(null);
-    try { window.localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+    setEnded(false); setStage("opening"); setQuoteCandidate(null);
+    try { window.localStorage.removeItem(SESSION_KEY); } catch { /* */ }
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(SESSION_KEY);
-      if (stored) setSessionId(stored);
-    } catch { /* ignore */ }
+    try { const s = window.localStorage.getItem(SESSION_KEY); if (s) setSessionId(s); } catch { /* */ }
   }, []);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, quoteCandidate]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, quoteCandidate]);
 
   async function sendMessage(content: string) {
     if (loading || ended) return;
-    if (ended) { reset(); return; }
 
-    const userMessage: UiMessage = { id: crypto.randomUUID(), role: "user", content };
-    setMessages((current) => [...current, userMessage]);
-    setLoading(true);
-    setQuoteCandidate(null);
+    setMessages((c) => [...c, { id: crypto.randomUUID(), role: "user", content }]);
+    setLoading(true); setQuoteCandidate(null);
 
-    let currentSessionId = sessionId;
-    if (typeof window !== "undefined") {
-      try { const s = window.localStorage.getItem(SESSION_KEY); if (s) currentSessionId = s; } catch { /* ignore */ }
-    }
+    let sid = sessionId;
+    try { const s = window.localStorage.getItem(SESSION_KEY); if (s) sid = s; } catch { /* */ }
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: currentSessionId, message: content })
-      });
-      if (!response.ok) throw new Error("chat request failed");
-
-      const data = (await response.json()) as ChatResponse;
-      setSessionId(data.sessionId);
-      setEnded(data.ended);
-      setStage(data.stage);
-      setQuoteCandidate(data.requiresConfirmation ? data.quoteCandidate : null);
-      try { if (data.sessionId) window.localStorage.setItem(SESSION_KEY, data.sessionId); } catch { /* ignore */ }
-
-      setMessages((current) => [...current, {
-        id: crypto.randomUUID(), role: "assistant",
-        content: data.reply,
-        requiresConfirmation: data.requiresConfirmation,
-        quoteCandidate: data.quoteCandidate
-      }]);
+      const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sid, message: content }) });
+      if (!r.ok) throw new Error("");
+      const d = (await r.json()) as ChatResponse;
+      setSessionId(d.sessionId); setEnded(d.ended); setStage(d.stage);
+      setQuoteCandidate(d.requiresConfirmation ? d.quoteCandidate : null);
+      try { if (d.sessionId) window.localStorage.setItem(SESSION_KEY, d.sessionId); } catch { /* */ }
+      setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
     } catch {
-      setMessages((current) => [...current, {
-        id: crypto.randomUUID(), role: "assistant",
-        content: "我这边停一下。咱先说你手里这件事。"
-      }]);
-    } finally {
-      setLoading(false);
-    }
+      setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: "我这边停一下。咱先说你手里这件事。" }]);
+    } finally { setLoading(false); }
   }
 
-  const stageIndex = stageToIndex(stage);
-  const stageLabel = STAGE_LABELS[stage] ?? "";
+  const stageIndex = Math.min(stageToIndex(stage), TOTAL_STAGES);
 
   return (
-    <main className="mx-auto flex h-[100dvh] max-w-md flex-col bg-[#fbf7f2] shadow-2xl shadow-stone-200/60">
+    <main className="mx-auto flex h-[100dvh] max-w-md flex-col relative z-10">
       {/* header */}
-      <header className="border-b border-stone-200 px-5 py-4">
-        <div className="flex items-center justify-between">
+      <header className="px-5 pt-6 pb-4">
+        <div className="flex items-end justify-between">
           <div>
-            <p className="text-xs tracking-[0.28em] text-stone-500">WHAT SHE SAID</p>
-            <h1 className="mt-1 text-lg font-semibold text-stone-900">她说过</h1>
+            <p className="text-[11px] tracking-[0.32em] text-[#b5a99f] uppercase">What She Said</p>
+            <h1 className="mt-0.5 text-2xl font-normal text-[#3a2e28] tracking-wide">她说过</h1>
           </div>
           {!ended && stage !== "opening" && (
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-[11px] text-stone-400">{stageLabel}</span>
-              <div className="flex gap-1">
+            <div className="flex flex-col items-end gap-2 pb-0.5">
+              <span className="text-xs text-[#b5a99f]">{STAGE_LABELS[stage]}</span>
+              <div className="flex gap-1.5">
                 {Array.from({ length: TOTAL_STAGES }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1 w-4 rounded-full transition-colors ${i < stageIndex ? "bg-stone-700" : "bg-stone-200"}`}
+                  <div key={i}
+                    className={`h-[3px] rounded-full transition-all duration-500 ${i < stageIndex ? "w-5 bg-[#d4a99a]" : "w-3 bg-[#e8ddd1]"}`}
                   />
                 ))}
               </div>
@@ -138,17 +93,17 @@ export function ChatWindow() {
       </header>
 
       {/* messages */}
-      <section className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+      <section className="flex-1 overflow-y-auto px-5 py-2">
+        <div className="space-y-5">
+          {messages.map((msg, i) => (
+            <MessageBubble key={msg.id} message={msg} isLatest={i === messages.length - 1 && msg.role === "assistant"} />
           ))}
           {loading && (
-            <div className="flex justify-start">
-              <div className="rounded-3xl rounded-bl-md border border-stone-200 bg-white/85 px-5 py-3 shadow-sm">
+            <div className="flex justify-start msg-enter">
+              <div className="rounded-2xl bg-white/80 px-5 py-3.5 shadow-sm">
                 {stage === "quote_confirm" || stage === "mirror_back"
-                  ? <p className="text-sm text-stone-400">正在确认那句你说过的话……</p>
-                  : <LoadingDots />}
+                  ? <span className="text-sm text-[#b5a99f] italic">想把她说过的那句话还给她……</span>
+                  : <span className="flex gap-1"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#d4a99a] [animation-delay:0s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#d4a99a] [animation-delay:0.15s]" /><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#d4a99a] [animation-delay:0.3s]" /></span>}
               </div>
             </div>
           )}
@@ -157,16 +112,15 @@ export function ChatWindow() {
       </section>
 
       {/* quote confirm */}
-      {quoteCandidate && !loading ? <QuoteConfirm quote={quoteCandidate} onConfirm={sendMessage} /> : null}
+      {quoteCandidate && !loading && <QuoteConfirm quote={quoteCandidate} onConfirm={sendMessage} />}
 
-      {/* input or reset */}
+      {/* input */}
       {ended ? (
-        <div className="border-t border-stone-200 bg-[#fbf7f2] px-4 py-4 text-center">
-          <button
-            onClick={reset}
-            className="text-sm text-stone-500 underline underline-offset-4 hover:text-stone-700"
+        <div className="border-t border-[#e8ddd1] bg-[#faf5ee] px-5 py-6 text-center">
+          <button onClick={reset}
+            className="text-sm tracking-wide text-[#b5a99f] transition-colors hover:text-[#8b7d73]"
           >
-            重新开始一次访谈
+            ✦ 重新开始
           </button>
         </div>
       ) : (

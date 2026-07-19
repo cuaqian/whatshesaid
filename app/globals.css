@@ -1,11 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fbf7f2;
-  --foreground: #2a201b;
-  --muted: #7b6d64;
-  --card: #fffaf4;
-  --line: #eaded3;
+  --bg-warm: #faf5ee;
+  --bg-card: #ffffff;
+  --text-main: #3a2e28;
+  --text-soft: #8b7d73;
+  --text-whisper: #b5a99f;
+  --line-warm: #e8ddd1;
+  --accent-rose: #d4a99a;
+  --accent-sage: #a8b5a2;
+  --aura-rose: #f5edea;
+  --aura-sage: #eef2ed;
 }
 
 * {
@@ -15,17 +20,48 @@
 html,
 body {
   min-height: 100%;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-warm);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+}
+
+/* subtle background texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, var(--aura-rose) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 0% 0%, var(--aura-sage) 0%, transparent 50%);
+  opacity: 0.6;
 }
 
 button,
 textarea,
 input {
   font: inherit;
+}
+
+/* ---- message animation ---- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-enter {
+  animation: fadeUp 0.4s ease-out both;
+}
+
+/* ---- mirror-back special glow ---- */
+.mirror-card {
+  background: linear-gradient(135deg, #fff8f4 0%, #faf5ee 60%, #f7f0ec 100%);
+  border: 1px solid var(--line-warm);
+  box-shadow: 0 2px 20px rgba(212, 169, 154, 0.12);
 }
