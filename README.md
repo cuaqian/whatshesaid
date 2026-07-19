@@ -96,25 +96,59 @@ lib/interview/guardrails.ts
 
 ## Vercel 部署
 
-1. 将项目推到 Git 仓库。
-2. 在 Vercel 导入项目目录 `WhatSheSaid`。
-3. 配置环境变量：
-   - `DEMO_MODE=1` 可先保证现场演示。
-   - 如接真实模型，配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`。
-4. 部署后测试手机浏览器访问。
+1. 将项目推到 Git 仓库（已完成：`github.com/cuaqian/whatshesaid`）。
+2. 在 [vercel.com/import](https://vercel.com/import) 导入仓库，Root Directory 留空即可。
+3. 配置以下 Environment Variables：
+
+| 名称 | 说明 |
+|---|---|
+| `DEMO_MODE` | 现场演示设 `1`，真实模型设 `0` |
+| `OPENAI_API_KEY` | 模型 API Key |
+| `OPENAI_BASE_URL` | 模型 API 地址 |
+| `OPENAI_MODEL` | 模型名称 |
+
+4. 点 Deploy，等待构建完成。
+5. 手机浏览器打开 `https://xxx.vercel.app` 测试。
+
+> ⚠️ **不要在代码或仓库里硬编码 API Key**。聊天中讨论过的 Key 部署后建议换新。
 
 ## Cloudflare 绑定自定义域名
 
-1. 在 Cloudflare 托管域名 DNS。
-2. 在 Vercel 项目里添加自定义域名。
-3. 按 Vercel 提示在 Cloudflare 添加 `CNAME` 或 `A` 记录。
-4. 确认 SSL/TLS 正常。
-5. `/api/*` 不做缓存规则。
+Vercel 的 `.vercel.app` 域名在国内访问可能不稳定。通过 Cloudflare 绑定自己的域名更可靠：
 
-## 现场兜底
+1. **域名托管到 Cloudflare**：在 Cloudflare 添加你的域名，按提示修改 DNS 服务器。
+2. **Vercel 添加自定义域名**：Vercel 项目 → Settings → Domains → 添加你的域名（如 `whatshesaid.your-domain.com`）。
+3. **Cloudflare 配置 DNS**：
+   - 类型：`CNAME`
+   - 名称：`whatshesaid`（子域名）
+   - 目标：`cname.vercel-dns.com`
+   - 代理状态：开启（橙色云朵，走 Cloudflare CDN）
+4. **SSL/TLS**：Cloudflare → SSL/TLS → 选 `Full`。
+5. **缓存规则**：Cloudflare → Rules → Page Rules：
+   - `whatshesaid.your-domain.com/api/*` → Cache Level: `Bypass`
 
-如果 Vercel 或模型接口不稳定：
+## 现场兜底方案
 
-- 设置 `DEMO_MODE=1`。
-- 本机运行 `npm run dev`。
-- 使用 Cloudflare Tunnel 暴露本机地址，生成备用二维码。
+黑客松现场网络不确定，准备三个后备：
+
+**后备 1：本机服务 + Cloudflare Tunnel**
+
+```bash
+# 终端 1：启动本地服务
+cd WhatSheSaid
+npm run dev
+
+# 终端 2：安装并启动 Cloudflare Tunnel
+brew install cloudflare/cloudflare/cloudflared
+cloudflared tunnel --url http://localhost:3000
+```
+
+Tunnel 会输出一个 `https://xxx.trycloudflare.com` 地址，做成备用二维码。
+
+**后备 2：DEMO_MODE 预置剧本**
+
+如果模型接口挂了，Vercel 环境变量切 `DEMO_MODE=1`，重新部署。会走堂姐（图书排版十天出师）的预置剧本，完整跑完五步访谈。
+
+**后备 3：本机 + 手机热点**
+
+电脑开热点，手机连同一 WiFi，访问 `http://本机IP:3000`。
