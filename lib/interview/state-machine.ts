@@ -218,49 +218,29 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // external_evidence: 被指定的证据（LLM 根据语境问，然后进 reference_shift）
+  // external_evidence: v2.1 固定问句，她说"没有"换问
   if (session.stage === "external_evidence") {
+    if (/没有|没|不记得/u.test(userMessage)) {
+      return { session, chat: response(session, EXTERNAL_EVIDENCE_FALLBACK) };
+    }
     session.stage = "reference_shift";
     session.referenceStep = 1;
-    const fallback = "你做的这些事，有没有人主动说过你哪点好？";
-    const reply = await callLlmWithFallback(
-      buildStagePrompt("external_evidence", { lastUserMessage: userMessage, allUserMessages }),
-      fallback
-    );
-    return { session, chat: response(session, reply) };
+    return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
   }
 
-  // reference_shift: 换尺子 —— 节奏由状态机控制，语句由 LLM 根据语境生成
+  // reference_shift: v2.1 固定问句——两步走，只落一句
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
-      // 同行/圈内人也是这样的吗？
       session.referenceStep = 2;
-      const fallback = "你身边干同样活的，是不是都这样？";
-      const reply = await callLlmWithFallback(
-        buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
-        fallback
-      );
-      return { session, chat: response(session, reply) };
+      return { session, chat: response(session, REFERENCE_OUTSIDER_PROMPT) };
     }
 
     if (session.referenceStep === 2) {
-      // 换外行来会怎样？
       session.referenceStep = 3;
-      const fallback = "那换一个从没干过的人来，会怎样？";
-      const reply = await callLlmWithFallback(
-        buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
-        fallback
-      );
-      return { session, chat: response(session, reply) };
-    }
-
-    if (session.referenceStep === 3) {
-      // 外行顶不住 → 落"标配"那句（固定），停下等她自觉悟
-      session.referenceStep = 4;
       return { session, chat: response(session, REFERENCE_SHIFT_LINE) };
     }
 
-    // step=4：她对"标配"做出了反应，选原话确认
+    // step=3：她对"标配"做了反应，选原话确认
     const quote = await selectQuoteWithContext(messages);
     session.stage = "quote_confirm";
     session.finalQuote = quote;
@@ -281,7 +261,13 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     if (isAffirmative(userMessage)) {
       session.quoteConfirmed = true;
       session.stage = "mirror_back";
-      return { session, chat: response(session, MIRROR_BACK_TEXT) };
+      // v2.1: 若原话含具体比喻（"像X一样/像X似的"），顺着词点一句
+      const quoteText = session.finalQuote ?? "";
+      const hasMetaphor = /像.+一样|像.+似的|像.+般|仿佛|宛如|犹如/u.test(quoteText);
+      return {
+        session,
+        chat: response(session, hasMetaphor ? `${MIRROR_BACK_TEXT}\n\n${MIRROR_BACK_WITH_METAPHOR}` : MIRROR_BACK_TEXT)
+      };
     }
 
     if (isNegative(userMessage)) {
