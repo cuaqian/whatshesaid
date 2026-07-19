@@ -30,6 +30,15 @@ function response(session: InterviewSession, reply: string, options: Partial<Cha
   };
 }
 
+function isShortOrDeflecting(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length <= 6) return true;
+  if (/^(不知道|忘了|想不起来|没啥|没了|没了啊|没)$/u.test(trimmed)) return true;
+  if (/^(随便|不清楚|记不清|不记得|没注意|没印象)$/u.test(trimmed)) return true;
+  if (/^.{1,4}[呀啊嗯哈哦呢]$/u.test(trimmed)) return true; // "自己想好的词呀"
+  return false;
+}
+
 async function callLlmWithFallback(prompt: string, fallback: string, maxTokens = 120): Promise<string> {
   if (isDemoMode()) {
     return fallback;
@@ -140,9 +149,24 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // keyword_followup: 追 2-3 轮
+  // keyword_followup: 追 1-2 轮；用户短答/敷衍就立刻推进
   if (session.stage === "keyword_followup") {
-    if (session.followupCount < 3) {
+    // 用户给了短答或敷衍，先存一下之前的回答，立刻推进到 external_evidence
+    if (isShortOrDeflecting(userMessage)) {
+      session.stage = "external_evidence";
+      const fallback = "你说的这事，有没有人当时就夸你、或者让你继续做？";
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("external_evidence", {
+          lastUserMessage: userMessage,
+          allUserMessages
+        }),
+        fallback
+      );
+      return { session, chat: response(session, reply) };
+    }
+
+    // 最多追 2 轮（之前 3 轮太长，用户体验差）
+    if (session.followupCount < 2) {
       session.followupCount += 1;
       const keyword = await extractKeyword(userMessage);
       const fallback = `那具体咋办的？`;
@@ -158,9 +182,9 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, reply) };
     }
 
-    // 追够了，进入 external_evidence，模型生成过渡
+    // 追够了，进入 external_evidence
     session.stage = "external_evidence";
-    const fallback = "你做的这些事，有没有人主动说过你好、觉得离不开你？";
+    const fallback = "你说的这事，有没有人当时就夸你、或者让你继续做？";
     const reply = await callLlmWithFallback(
       buildStagePrompt("external_evidence", {
         lastUserMessage: userMessage,
@@ -171,13 +195,15 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // external_evidence: 被指定的证据（框架2.0：三个角度，追1-2轮）
+  // external_evidence: 被指定的证据（用户短答直接跳过，进入换尺子）
   if (session.stage === "external_evidence") {
-    if (session.evidenceCount < 2 && /没有|没|不记得|不知道/u.test(userMessage)) {
-      session.evidenceCount += 1;
-      const fallback = "那客人里、同事里，有没有谁老爱找你、说过你哪点好？";
+    // 用户给了短答或敷衍，立刻推进到 reference_shift
+    if (isShortOrDeflecting(userMessage)) {
+      session.stage = "reference_shift";
+      session.referenceStep = 1;
+      const fallback = "嗯。那你身边干同样活的，是不是也这样？";
       const reply = await callLlmWithFallback(
-        buildStagePrompt("external_evidence", {
+        buildStagePrompt("reference_shift", {
           lastUserMessage: userMessage,
           allUserMessages
         }),
@@ -186,24 +212,10 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, reply) };
     }
 
-    if (session.evidenceCount < 2) {
-      // 她回答了，还可以再从另一个角度追一轮
-      session.evidenceCount += 1;
-      const fallback = "你身边干同样活的人，是不是都这样？";
-      const reply = await callLlmWithFallback(
-        buildStagePrompt("external_evidence", {
-          lastUserMessage: userMessage,
-          allUserMessages
-        }),
-        fallback
-      );
-      return { session, chat: response(session, reply) };
-    }
-
-    // 外部证据追够了，进入换尺子
+    // 最多 1 轮（之前 2 轮太长）；问完直接进 reference_shift
     session.stage = "reference_shift";
     session.referenceStep = 1;
-    const fallback = "你身边干同样活的人，是不是都这样？";
+    const fallback = "你身边干同样活的，是不是也都这样？";
     const reply = await callLlmWithFallback(
       buildStagePrompt("reference_shift", {
         lastUserMessage: userMessage,
