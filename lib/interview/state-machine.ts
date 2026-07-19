@@ -226,10 +226,10 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // reference_shift: 换尺子
+  // reference_shift: 换尺子（三步，demo 脚本要求的精确节奏）
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
-      // 第一步结束，问第二步
+      // 第一步：同行都这样吗？→ 进入第二步
       session.referenceStep = 2;
       const fallback = "那换一个从没干过的人来，今晚让她顶你这个班，会咋样？";
       const reply = await callLlmWithFallback(
@@ -242,12 +242,19 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, reply) };
     }
 
-    // 第二步结束，落标配那一句，然后选原话确认
+    if (session.referenceStep === 2) {
+      // 第二步：外行顶班会怎样？→ 落"标配"那句，然后停下，等她自己的反应
+      session.referenceStep = 3;
+      const reply = REFERENCE_SHIFT_LINE;
+      // 不调模型，落完标配就停——给她空间自己绕一圈撞到答案
+      return { session, chat: response(session, reply) };
+    }
+
+    // 第三步：她已经说了自己的反应（可能是自觉悟的句子），现在选原话确认
     const quote = await selectQuoteWithContext(messages);
     session.stage = "quote_confirm";
     session.finalQuote = quote;
-
-    const fallback = `${REFERENCE_SHIFT_LINE}\n\n你前面说了一句话，我想跟你确认一下——你说的是『${quote}』，对吗？`;
+    const fallback = `你前面说了一句话，我想跟你确认一下——你说的是『${quote}』，对吗？`;
     const reply = await callLlmWithFallback(
       buildStagePrompt("quote_confirm", {
         lastUserMessage: userMessage,

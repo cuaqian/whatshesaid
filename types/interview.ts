@@ -16,7 +16,7 @@ export interface InterviewSession {
   demoMode: boolean;
   followupCount: number;
   evidenceCount: number;
-  referenceStep: 0 | 1 | 2;
+  referenceStep: 0 | 1 | 2 | 3;
   createdAt: string;
   updatedAt: string;
 }
