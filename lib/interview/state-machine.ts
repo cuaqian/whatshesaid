@@ -171,10 +171,11 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // external_evidence: 被指定的证据
+  // external_evidence: 被指定的证据（框架2.0：三个角度，追1-2轮）
   if (session.stage === "external_evidence") {
-    if (/没有|没|不记得|不知道/u.test(userMessage)) {
-      const fallback = "那客人里、同事里、老板嘴里，有没有谁说过你哪点好、老爱找你的？";
+    if (session.evidenceCount < 2 && /没有|没|不记得|不知道/u.test(userMessage)) {
+      session.evidenceCount += 1;
+      const fallback = "那客人里、同事里，有没有谁老爱找你、说过你哪点好？";
       const reply = await callLlmWithFallback(
         buildStagePrompt("external_evidence", {
           lastUserMessage: userMessage,
@@ -185,7 +186,21 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, reply) };
     }
 
-    // 进入换尺子第一步
+    if (session.evidenceCount < 2) {
+      // 她回答了，还可以再从另一个角度追一轮
+      session.evidenceCount += 1;
+      const fallback = "你身边干同样活的人，是不是都这样？";
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("external_evidence", {
+          lastUserMessage: userMessage,
+          allUserMessages
+        }),
+        fallback
+      );
+      return { session, chat: response(session, reply) };
+    }
+
+    // 外部证据追够了，进入换尺子
     session.stage = "reference_shift";
     session.referenceStep = 1;
     const fallback = "你身边干同样活的人，是不是都这样？";

@@ -27,6 +27,7 @@ export async function getOrCreateSession(sessionId?: string): Promise<StoredSess
     quoteConfirmed: false,
     demoMode: isDemoMode(),
     followupCount: 0,
+    evidenceCount: 0,
     referenceStep: 0,
     createdAt: timestamp,
     updatedAt: timestamp,
