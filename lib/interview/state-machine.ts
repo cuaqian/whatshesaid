@@ -3,7 +3,7 @@ import type { ChatMessage } from "@/types/message";
 import { createLlmClient, isDemoMode } from "@/lib/llm/client";
 import { SYSTEM_PROMPT, buildStagePrompt, buildKeywordExtractionPrompt } from "./prompts";
 import { isAffirmative, isNegative, isPoliteAgreement, sanitizeAssistantReply, violatesGuardrails } from "./guardrails";
-import { isExactUserQuote, pickQuoteCandidate } from "./quote";
+import { isExactUserQuote, findRealizationQuote, pickQuoteCandidate } from "./quote";
 import {
   END_TEXT,
   MIRROR_BACK_TEXT,
@@ -79,7 +79,12 @@ async function extractKeyword(text: string): Promise<string> {
 async function selectQuoteWithContext(messages: ChatMessage[]): Promise<string> {
   const userMessages = messages.filter((message) => message.role === "user");
   const userLines = userMessages.map((message) => message.content);
-  const allText = userLines.join("\n");
+
+  // 优先：本地直接找最近一条自觉悟句子（避免 LLM 选回前面的动作句）
+  const realization = findRealizationQuote(messages);
+  if (realization) {
+    return realization;
+  }
 
   if (isDemoMode()) {
     return pickQuoteCandidate(messages);
