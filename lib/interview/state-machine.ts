@@ -218,45 +218,55 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // external_evidence: 被指定的证据（用户短答直接跳过，进入换尺子）
+  // external_evidence: 被指定的证据（LLM 根据语境问，然后进 reference_shift）
   if (session.stage === "external_evidence") {
-    // 用户给了短答或敷衍，立刻推进到 reference_shift 第一步
-    if (isShortOrDeflecting(userMessage)) {
-      session.stage = "reference_shift";
-      session.referenceStep = 1;
-      return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
-    }
-
-    // 最多 1 轮：直接进 reference_shift 第一步
     session.stage = "reference_shift";
     session.referenceStep = 1;
-    return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
+    const fallback = "你做的这些事，有没有人主动说过你哪点好？";
+    const reply = await callLlmWithFallback(
+      buildStagePrompt("external_evidence", { lastUserMessage: userMessage, allUserMessages }),
+      fallback
+    );
+    return { session, chat: response(session, reply) };
   }
 
-  // reference_shift: 换尺子（demo 脚本的精确节奏——不调模型，不重不漏）
+  // reference_shift: 换尺子 —— 节奏由状态机控制，语句由 LLM 根据语境生成
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
-      // step=1：用户已答"同行都这样吗"，现在问"换外行来顶班"
+      // 同行/圈内人也是这样的吗？
       session.referenceStep = 2;
-      return { session, chat: response(session, REFERENCE_OUTSIDER_PROMPT) };
+      const fallback = "你身边干同样活的，是不是都这样？";
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
+        fallback
+      );
+      return { session, chat: response(session, reply) };
     }
 
     if (session.referenceStep === 2) {
-      // step=2：用户已答"外行顶班"，AI 只落"标配"那句，停下等她自觉悟
+      // 换外行来会怎样？
       session.referenceStep = 3;
+      const fallback = "那换一个从没干过的人来，会怎样？";
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
+        fallback
+      );
+      return { session, chat: response(session, reply) };
+    }
+
+    if (session.referenceStep === 3) {
+      // 外行顶不住 → 落"标配"那句（固定），停下等她自觉悟
+      session.referenceStep = 4;
       return { session, chat: response(session, REFERENCE_SHIFT_LINE) };
     }
 
-    // step=3：她对"标配"做出了反应，选原话确认
+    // step=4：她对"标配"做出了反应，选原话确认
     const quote = await selectQuoteWithContext(messages);
     session.stage = "quote_confirm";
     session.finalQuote = quote;
     const fallback = `你前面说了一句话，我想跟你确认一下——你说的是『${quote}』，对吗？`;
     const reply = await callLlmWithFallback(
-      buildStagePrompt("quote_confirm", {
-        lastUserMessage: userMessage,
-        allUserMessages
-      }),
+      buildStagePrompt("quote_confirm", { lastUserMessage: userMessage, allUserMessages }),
       fallback,
       160
     );
