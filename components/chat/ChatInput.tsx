@@ -17,6 +17,7 @@ const SpeechRecognition =
 export function ChatInput({ disabled, onSend }: Props) {
   const [value, setValue] = useState("");
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState("");
   const recognitionRef = useRef<any>(null);
 
   const stopListening = useCallback(() => {
@@ -28,20 +29,38 @@ export function ChatInput({ disabled, onSend }: Props) {
   }, []);
 
   const startListening = useCallback(() => {
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      setMicError("当前浏览器不支持语音输入，请用 Chrome 或 Edge");
+      setTimeout(() => setMicError(""), 3000);
+      return;
+    }
+
+    setMicError("");
 
     const recognition = new SpeechRecognition();
     recognition.lang = "zh-CN";
-    recognition.interimResults = false;
+    recognition.interimResults = true;
+    recognition.continuous = false;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
-      const text = event.results[0][0].transcript;
-      setValue((prev) => (prev ? prev + text : text));
-      stopListening();
+      // interimResults 模式下边走边显示
+      let finalText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        finalText += event.results[i][0].transcript;
+      }
+      setValue((prev) => (prev ? prev + finalText : finalText));
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
+      if (event.error === "not-allowed") {
+        setMicError("请允许麦克风权限后重试");
+      } else if (event.error === "no-speech") {
+        setMicError("没听到声音，请再试一次");
+      } else {
+        setMicError("语音识别出错，请打字输入");
+      }
+      setTimeout(() => setMicError(""), 3000);
       stopListening();
     };
 
@@ -50,8 +69,13 @@ export function ChatInput({ disabled, onSend }: Props) {
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setMicError("语音启动失败，请用 Chrome 打开");
+      setTimeout(() => setMicError(""), 3000);
+    }
   }, [stopListening]);
 
   function handleSubmit() {
@@ -113,6 +137,9 @@ export function ChatInput({ disabled, onSend }: Props) {
           </svg>
         </button>
       </div>
+      {micError && (
+        <p className="mt-1.5 text-center text-xs text-red-400">{micError}</p>
+      )}
     </div>
   );
 }
