@@ -7,6 +7,7 @@ import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { QuoteConfirm } from "./QuoteConfirm";
 import { MirrorBack } from "./MirrorBack";
+import { LandingScreen } from "./LandingScreen";
 
 const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
 const SESSION_KEY = "whatshesaid_session";
@@ -32,6 +33,7 @@ export function ChatWindow() {
   const [stage, setStage] = useState<InterviewStage>("opening");
   const [quoteCandidate, setQuoteCandidate] = useState<string | null>(null);
   const [showMirror, setShowMirror] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   // 记录第五步确认前最后一条原话，镜像屏用
   const mirrorQuoteRef = useRef<string | null>(null);
@@ -39,13 +41,19 @@ export function ChatWindow() {
   const reset = useCallback(() => {
     setSessionId(null);
     setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
-    setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false);
+    setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(false);
     mirrorQuoteRef.current = null;
     try { window.localStorage.removeItem(SESSION_KEY); } catch { /* */ }
   }, []);
 
   useEffect(() => {
-    try { const s = window.localStorage.getItem(SESSION_KEY); if (s) setSessionId(s); } catch { /* */ }
+    try {
+      const stored = window.localStorage.getItem(SESSION_KEY);
+      if (stored) {
+        setSessionId(stored);
+        setShowLanding(false); // 有进行中的对话，跳过入口
+      }
+    } catch { /* */ }
   }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, showMirror]);
 
@@ -104,6 +112,11 @@ export function ChatWindow() {
   const stageIndex = Math.min(stageToIndex(stage), TOTAL_STAGES);
   // 只在前四步显示进度，第五步（镜面）和结束后隐藏
   const showProgress = !ended && stage !== "opening" && stage !== "mirror_back" && stage !== "end";
+
+  // === 入口屏 ===
+  if (showLanding && !sessionId) {
+    return <LandingScreen onStart={() => setShowLanding(false)} />;
+  }
 
   // === 镜面屏 ===
   if (showMirror && mirrorQuoteRef.current) {
