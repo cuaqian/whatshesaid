@@ -233,21 +233,21 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
   }
 
-  // reference_shift: 换尺子（demo 脚本要求的精确节奏——不调模型，两步用固定问句）
+  // reference_shift: 换尺子（demo 脚本的精确节奏——不调模型，不重不漏）
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
-      // 第一步：同行都这样吗？
+      // step=1：用户已答"同行都这样吗"，现在问"换外行来顶班"
       session.referenceStep = 2;
-      return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
-    }
-
-    if (session.referenceStep === 2) {
-      // 第二步：外行顶班会怎样？
-      session.referenceStep = 3;
       return { session, chat: response(session, REFERENCE_OUTSIDER_PROMPT) };
     }
 
-    // 第三步：她已经说了自己的反应（可能是自觉悟的句子），现在选原话确认
+    if (session.referenceStep === 2) {
+      // step=2：用户已答"外行顶班"，AI 只落"标配"那句，停下等她自觉悟
+      session.referenceStep = 3;
+      return { session, chat: response(session, REFERENCE_SHIFT_LINE) };
+    }
+
+    // step=3：她对"标配"做出了反应，选原话确认
     const quote = await selectQuoteWithContext(messages);
     session.stage = "quote_confirm";
     session.finalQuote = quote;
