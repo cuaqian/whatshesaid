@@ -20,13 +20,13 @@ export function MessageBubble({ message }: { message: UiMessage; isLatest?: bool
 
   return (
     <div className={`msg-enter flex ${isAssistant ? "justify-start" : "justify-end"}`}>
-      <div className="max-w-[85%]">
+      <div className={`${isAssistant ? "max-w-[82%] lg:max-w-[75%]" : "max-w-[78%] lg:max-w-[65%]"}`}>
         {isAssistant ? (
-          <div className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] leading-relaxed text-[#3a2e28] shadow-sm">
+          <div className="rounded-2xl bg-white/80 px-4 lg:px-5 py-3 lg:py-3.5 text-[15px] lg:text-base leading-relaxed text-[#3a2e28] shadow-sm">
             <span>{message.content}</span>
           </div>
         ) : (
-          <div className="rounded-2xl rounded-br-md bg-[#3a2e28] px-4 py-3 text-[15px] leading-relaxed text-white/90 shadow-sm">
+          <div className="rounded-2xl rounded-br-md bg-[#3a2e28] px-4 lg:px-5 py-3 lg:py-3.5 text-[15px] lg:text-base leading-relaxed text-white/90 shadow-sm">
             <span>{message.content}</span>
           </div>
         )}

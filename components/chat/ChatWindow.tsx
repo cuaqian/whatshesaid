@@ -124,13 +124,13 @@ export function ChatWindow() {
   }
 
   return (
-    <main className="mx-auto flex h-[100dvh] max-w-md flex-col relative z-10">
+    <main className="mx-auto flex h-[100dvh] w-full flex-col relative z-10 sm:max-w-lg md:max-w-xl lg:max-w-2xl lg:border-x lg:border-[#e8ddd1]/50">
       {/* header */}
-      <header className="px-5 pt-6 pb-4">
+      <header className="px-5 sm:px-8 pt-6 pb-4 lg:pt-10">
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-[11px] tracking-[0.32em] text-[#b5a99f]">她说过</p>
-            <h1 className="mt-0.5 text-2xl font-normal text-[#3a2e28] tracking-wide">&nbsp;</h1>
+            <p className="text-[11px] sm:text-xs tracking-[0.32em] text-[#b5a99f]">她说过</p>
+            <h1 className="mt-0.5 text-2xl lg:text-3xl font-normal text-[#3a2e28] tracking-wide">&nbsp;</h1>
           </div>
           {showProgress && (
             <div className="flex flex-col items-end gap-2 pb-0.5">
@@ -148,8 +148,8 @@ export function ChatWindow() {
       </header>
 
       {/* messages */}
-      <section className="flex-1 overflow-y-auto px-5 py-2">
-        <div className="space-y-5">
+      <section className="flex-1 overflow-y-auto px-5 sm:px-8 py-2 lg:py-4">
+        <div className="space-y-5 lg:space-y-6">
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}

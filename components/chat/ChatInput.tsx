@@ -88,8 +88,8 @@ export function ChatInput({ disabled, onSend }: Props) {
   const hasSpeechSupport = !!SpeechRecognition;
 
   return (
-    <div className="border-t border-[#e8ddd1] bg-[#faf5ee] px-4 py-4">
-      <div className="flex items-end gap-2 rounded-2xl bg-white/80 px-4 py-2 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-[#d4a99a]/30">
+    <div className="border-t border-[#e8ddd1] bg-[#faf5ee] px-4 sm:px-5 lg:px-8 py-4 lg:py-5">
+      <div className="flex items-end gap-2 rounded-2xl bg-white/80 px-4 py-2 lg:px-5 lg:py-2.5 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-[#d4a99a]/30">
         {/* 语音按钮 */}
         {hasSpeechSupport && (
           <button
