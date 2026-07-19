@@ -1,154 +1,69 @@
-# 她说过 / WhatSheSaid
+# 她说过 / What She Said
 
-黑客松 Demo 版 AI 访谈 Web 应用。
+> 问几个问题。把你脱口而出、却从没认真听过的那句话，原样还给你。
 
-它不是聊天机器人、心理咨询、优势测评、报告生成器或教练产品。它只做一件事：引导用户讲一件自己真实做过的事，然后从用户原话中挑一句，先确认，再原样还给她。
+**[🔗 立即体验](https://whatshesaid.cuaqian.xyz)**
 
-## 技术栈
+---
 
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- Next.js Route Handlers
-- 内存存储 MVP，可替换为 Supabase/Postgres
-- OpenAI-compatible LLM client
+## 它不是
 
-## 本地运行
+聊天机器人。心理咨询。优势测评。报告生成器。教练。
 
-```bash
-cp .env.example .env.local
-npm install          # 项目已配置 .npmrc，自动走 npmmirror 国内镜像
-npm run dev
+## 它是
+
+**一面镜子。**
+
+你讲一件你做过的事。它只问几个问题。然后把你自己的原话，原样照回来。
+
+不夸你。不评价你。不替你命名。不生成报告。不保存你的任何东西。
+
+就像那个访谈者在真实对话里发现的——她问了 15 分钟，一句建议都没给，对方却说"我好像找到答案了"。
+
+---
+
+## 为什么是她
+
+几乎每一个被问过"你的优势是什么"的女性，都卡住过。
+
+不是因为没优势。是因为我们一直站在一堆跟自己一样的人里，量自己——那些你每天在做、以为是"标配"的事，换一个完全没做过的人来，根本接不住。
+
+**「她说过」不做测评，只做还原。** 它把你脱口而出、却没意识到的那些话，挑出来、确认、再原样放回你面前。
+
+那是你早就说出口的。你只是还没听见。
+
+---
+
+## 走一遍
+
+```
+第一步  带回现场    说一件你认真做过的事
+第二步  咬词追问    你刚说的那个词，具体是怎么做的？
+第三步  别人的眼睛  有人主动说过你哪点好吗？
+第四步  换个尺子    身边做这行的人，是不是都这样？
+                   那换一个完全没做过的人来，会怎样？
+第五步  把话还给她  你前面说了一句话……『……』，对吗？
+                   这就是你做的事。你已经说出来了。
 ```
 
-如果本机环境带有不兼容的 `NODE_OPTIONS`，可临时清空后运行：
+---
 
-```bash
-NODE_OPTIONS="" npm run build
-```
+## 技术
 
-打开：
+- **Next.js** App Router + **TypeScript** + **Tailwind CSS**
+- 八步状态机控制对话节奏，LLM 只在当前阶段内生成语境化追问
+- 完整对话历史传入每一轮 prompt，确保咬词准确
+- 本地关键词抽取 + 自觉悟句优先匹配，原话还原不走偏
+- 浏览器原生 Web Speech API 免费语音输入
+- 零数据库：对话上下文内存完成，不留任何用户数据
 
-```text
-http://localhost:3000
-```
+---
 
-## 环境变量
+## 团队
 
-```text
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
-OPENAI_MODEL=
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-DEMO_MODE=1
-```
-
-说明：
-
-- `DEMO_MODE=1` 时不依赖真实大模型，也能完整演示流程。
-- 未配置 `OPENAI_API_KEY` 时会自动按 Demo Mode 回退。
-- 当前版本使用 `lib/db/queries.ts` 的内存存储，不做登录，不长期保存用户数据。
-- 后续接 Supabase 时保留同一查询接口即可。
-
-## 核心流程
-
-状态机位于：
-
-```text
-lib/interview/state-machine.ts
-```
-
-阶段：
-
-```text
-opening -> story -> keyword_followup -> external_evidence -> reference_shift -> quote_confirm -> mirror_back -> end
-```
-
-模型不能自由决定流程，只能在当前阶段内辅助生成短追问或挑选用户原话。
-
-## 产品红线
-
-提示词集中在：
-
-```text
-lib/interview/prompts.ts
-```
-
-守护规则集中在：
-
-```text
-lib/interview/guardrails.ts
-```
-
-实现约束：
-
-- AI 不能预设、编造或总结能力名称。
-- AI 只能使用用户自己说过的话。
-- 用户没说过的词，不能用于最终命名或返还。
-- AI 不夸奖、不评价、不建议、不诊断、不安慰。
-- AI 不生成报告、不打分、不排行、不推荐。
-- AI 不索取手机号、微信号、邮箱等联系方式。
-- AI 一次只问一个问题，问完停下。
-- 语音或转写不确定时，必须确认，不能脑补。
-- 最后必须先确认用户原话，再原样还给她。
-
-## Vercel 部署
-
-1. 将项目推到 Git 仓库（已完成：`github.com/cuaqian/whatshesaid`）。
-2. 在 [vercel.com/import](https://vercel.com/import) 导入仓库，Root Directory 留空即可。
-3. 配置以下 Environment Variables：
-
-| 名称 | 说明 |
+| 角色 | |
 |---|---|
-| `DEMO_MODE` | 现场演示设 `1`，真实模型设 `0` |
-| `OPENAI_API_KEY` | 模型 API Key |
-| `OPENAI_BASE_URL` | 模型 API 地址 |
-| `OPENAI_MODEL` | 模型名称 |
-
-4. 点 Deploy，等待构建完成。
-5. 手机浏览器打开 `https://xxx.vercel.app` 测试。
-
-> ⚠️ **不要在代码或仓库里硬编码 API Key**。聊天中讨论过的 Key 部署后建议换新。
-
-## Cloudflare 绑定自定义域名
-
-Vercel 的 `.vercel.app` 域名在国内访问可能不稳定。通过 Cloudflare 绑定自己的域名更可靠：
-
-1. **域名托管到 Cloudflare**：在 Cloudflare 添加你的域名，按提示修改 DNS 服务器。
-2. **Vercel 添加自定义域名**：Vercel 项目 → Settings → Domains → 添加你的域名（如 `whatshesaid.your-domain.com`）。
-3. **Cloudflare 配置 DNS**：
-   - 类型：`CNAME`
-   - 名称：`whatshesaid`（子域名）
-   - 目标：`cname.vercel-dns.com`
-   - 代理状态：开启（橙色云朵，走 Cloudflare CDN）
-4. **SSL/TLS**：Cloudflare → SSL/TLS → 选 `Full`。
-5. **缓存规则**：Cloudflare → Rules → Page Rules：
-   - `whatshesaid.your-domain.com/api/*` → Cache Level: `Bypass`
-
-## 现场兜底方案
-
-黑客松现场网络不确定，准备三个后备：
-
-**后备 1：本机服务 + Cloudflare Tunnel**
-
-```bash
-# 终端 1：启动本地服务
-cd WhatSheSaid
-npm run dev
-
-# 终端 2：安装并启动 Cloudflare Tunnel
-brew install cloudflare/cloudflare/cloudflared
-cloudflared tunnel --url http://localhost:3000
-```
-
-Tunnel 会输出一个 `https://xxx.trycloudflare.com` 地址，做成备用二维码。
-
-**后备 2：DEMO_MODE 预置剧本**
-
-如果模型接口挂了，Vercel 环境变量切 `DEMO_MODE=1`，重新部署。会走堂姐（图书排版十天出师）的预置剧本，完整跑完五步访谈。
-
-**后备 3：本机 + 手机热点**
-
-电脑开热点，手机连同一 WiFi，访问 `http://本机IP:3000`。
+| 石悦 | 产品 / 队长 |
+| 韦 | 人类沟通师 · 成长叙事 |
+| 珀冉 | 人类沟通师 · 职业发展 |
+| 瓜 | 全栈工程师 |
