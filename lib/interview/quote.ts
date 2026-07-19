@@ -2,12 +2,22 @@ import type { ChatMessage } from "@/types/message";
 
 const WEAK_PHRASES = ["不知道", "随便", "还好", "没有", "嗯", "可以", "好的", "对", "是"];
 const ACTION_HINTS = ["做", "弄", "看", "说", "问", "拿", "给", "找", "改", "算", "记", "查", "带", "安排", "处理", "协调", "收", "发", "跑", "顶", "接", "管"];
+const REALIZATION_HINTS = [
+  "跳出", "外行", "稀缺", "同行标准", "标配", "标榜",
+  "看不见", "没在意", "没意识", "不当回事", "习以为常",
+  "原来", "才发现", "其实", "我一直", "我只是", "我只是没",
+  "不一样", "差别", "差距", "不像", "不是每个"
+];
 
 function splitIntoCandidates(text: string): string[] {
   return text
     .split(/[。！？!?；;\n]/u)
     .map((item) => item.trim().replace(/^[-—，,、\s]+/u, ""))
     .filter(Boolean);
+}
+
+function isRealization(candidate: string): boolean {
+  return REALIZATION_HINTS.some((hint) => candidate.includes(hint));
 }
 
 function scoreCandidate(candidate: string): number {
@@ -33,6 +43,11 @@ function scoreCandidate(candidate: string): number {
 
   if (/我/u.test(candidate)) {
     score += 6;
+  }
+
+  // 自觉悟句子大幅加分——优先选这种"她自己撞到的答案"
+  if (isRealization(candidate)) {
+    score += 50;
   }
 
   return score;

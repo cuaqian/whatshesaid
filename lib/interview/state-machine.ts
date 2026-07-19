@@ -90,7 +90,9 @@ async function selectQuoteWithContext(messages: ChatMessage[]): Promise<string> 
 
 从她说过的话里选一句最适合还给她的原话。
 要求：只能返回她原文中的连续片段，不能改一个字，不能润色，不能加标点。
-选那句最具体、有动作、有现场感、她脱口而出却轻轻带过的。
+优先级：
+1. 如果她最近自己说了一句明显的"自觉悟"的话——包含"跳出""外行""稀缺""同行标准""原来""其实""不一样"等——优先选这句。
+2. 否则选那句最具体、有动作、有现场感、她脱口而出却轻轻带过的。
 
 她说的所有话：
 ${userLines.map((line) => `- ${line}`).join("\n")}
@@ -125,10 +127,6 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     session.evidenceCount = 0;
     session.referenceStep = 0;
     // 接着走下面的 opening 分支
-  }
-
-  if (session.stage === "end") {
-    return { session, chat: response(session, END_TEXT, { ended: true }) };
   }
 
   // opening: 固定开场
