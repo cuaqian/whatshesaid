@@ -6,10 +6,15 @@ import { isAffirmative, isNegative, isPoliteAgreement, sanitizeAssistantReply, v
 import { isExactUserQuote, findRealizationQuote, pickQuoteCandidate } from "./quote";
 import {
   END_TEXT,
+  EXTERNAL_EVIDENCE_FALLBACK,
+  EXTERNAL_EVIDENCE_PROMPT,
   MIRROR_BACK_TEXT,
   MIRROR_BACK_WITH_METAPHOR,
   OPENING_TEXT,
-  REFERENCE_SHIFT_LINE
+  REFERENCE_OUTSIDER_PROMPT,
+  REFERENCE_PEER_PROMPT,
+  REFERENCE_SHIFT_LINE,
+  STORY_PROMPT
 } from "./stages";
 
 export interface AdvanceInterviewInput {
@@ -215,57 +220,31 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
 
   // external_evidence: 被指定的证据（用户短答直接跳过，进入换尺子）
   if (session.stage === "external_evidence") {
-    // 用户给了短答或敷衍，立刻推进到 reference_shift
+    // 用户给了短答或敷衍，立刻推进到 reference_shift 第一步
     if (isShortOrDeflecting(userMessage)) {
       session.stage = "reference_shift";
       session.referenceStep = 1;
-      const fallback = "嗯。那你身边干同样活的，是不是也这样？";
-      const reply = await callLlmWithFallback(
-        buildStagePrompt("reference_shift", {
-          lastUserMessage: userMessage,
-          allUserMessages
-        }),
-        fallback
-      );
-      return { session, chat: response(session, reply) };
+      return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
     }
 
-    // 最多 1 轮（之前 2 轮太长）；问完直接进 reference_shift
+    // 最多 1 轮：直接进 reference_shift 第一步
     session.stage = "reference_shift";
     session.referenceStep = 1;
-    const fallback = "你身边干同样活的，是不是也都这样？";
-    const reply = await callLlmWithFallback(
-      buildStagePrompt("reference_shift", {
-        lastUserMessage: userMessage,
-        allUserMessages
-      }),
-      fallback
-    );
-    return { session, chat: response(session, reply) };
+    return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
   }
 
-  // reference_shift: 换尺子（三步，demo 脚本要求的精确节奏）
+  // reference_shift: 换尺子（demo 脚本要求的精确节奏——不调模型，两步用固定问句）
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
-      // 第一步：同行都这样吗？→ 进入第二步
+      // 第一步：同行都这样吗？
       session.referenceStep = 2;
-      const fallback = "那换一个从没干过的人来，今晚让她顶你这个班，会咋样？";
-      const reply = await callLlmWithFallback(
-        buildStagePrompt("reference_shift", {
-          lastUserMessage: userMessage,
-          allUserMessages
-        }),
-        fallback
-      );
-      return { session, chat: response(session, reply) };
+      return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
     }
 
     if (session.referenceStep === 2) {
-      // 第二步：外行顶班会怎样？→ 落"标配"那句，然后停下，等她自己的反应
+      // 第二步：外行顶班会怎样？
       session.referenceStep = 3;
-      const reply = REFERENCE_SHIFT_LINE;
-      // 不调模型，落完标配就停——给她空间自己绕一圈撞到答案
-      return { session, chat: response(session, reply) };
+      return { session, chat: response(session, REFERENCE_OUTSIDER_PROMPT) };
     }
 
     // 第三步：她已经说了自己的反应（可能是自觉悟的句子），现在选原话确认
