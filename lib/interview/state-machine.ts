@@ -1,6 +1,7 @@
 import type { ChatResponse, InterviewSession } from "@/types/interview";
 import type { ChatMessage } from "@/types/message";
 import { createLlmClient, isDemoMode } from "@/lib/llm/client";
+import type { LlmMessage } from "@/lib/llm/types";
 import { SYSTEM_PROMPT, buildStagePrompt, buildKeywordExtractionPrompt } from "./prompts";
 import { isAffirmative, isNegative, isPoliteAgreement, sanitizeAssistantReply, violatesGuardrails } from "./guardrails";
 import { isExactUserQuote, findRealizationQuote, pickQuoteCandidate } from "./quote";
@@ -44,13 +45,29 @@ function isShortOrDeflecting(text: string): boolean {
   return false;
 }
 
-async function callLlmWithFallback(prompt: string, fallback: string, maxTokens = 120): Promise<string> {
+/**
+ * 调 LLM —— 传完整对话历史，让模型看到她说过的每一句话。
+ * systemPrompt 是规则 + 当前阶段目标，messages 是真实的对话记录。
+ */
+async function callLlmWithFallback(
+  systemPrompt: string,
+  fallback: string,
+  messages: ChatMessage[],
+  maxTokens = 120
+): Promise<string> {
   if (isDemoMode()) {
     return fallback;
   }
   try {
     const llm = createLlmClient();
-    const reply = await llm.generate([{ role: "system", content: prompt }], { temperature: 0.3, maxTokens });
+    // 构造上下文：system prompt + 完整对话历史
+    const context: LlmMessage[] = [
+      { role: "system", content: systemPrompt }
+    ];
+    for (const msg of messages) {
+      context.push({ role: msg.role as "user" | "assistant", content: msg.content });
+    }
+    const reply = await llm.generate(context, { temperature: 0.3, maxTokens });
     const text = sanitizeAssistantReply(reply, fallback);
     if (violatesGuardrails(text)) {
       return fallback;
@@ -149,7 +166,8 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     const fallback = "你做过的事里，印象最深的是哪一段？带我回那一天——几点开始、什么环境、跟谁一起、先干啥？";
     const reply = await callLlmWithFallback(
       buildStagePrompt("story", { lastUserMessage: userMessage, allUserMessages }),
-      fallback
+      fallback,
+      messages
     );
     return { session, chat: response(session, reply) };
   }
@@ -167,7 +185,8 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
         followupCount: 1,
         allUserMessages
       }),
-      fallback
+      fallback,
+      messages
     );
     return { session, chat: response(session, reply) };
   }
@@ -184,7 +203,9 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
           allUserMessages
         }),
         fallback
-      );
+      ,
+      messages
+    );
       return { session, chat: response(session, reply) };
     }
 
@@ -201,7 +222,9 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
           allUserMessages
         }),
         fallback
-      );
+      ,
+      messages
+    );
       return { session, chat: response(session, reply) };
     }
 
@@ -214,6 +237,8 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
         allUserMessages
       }),
       fallback
+    ,
+      messages
     );
     return { session, chat: response(session, reply) };
   }
@@ -225,7 +250,9 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       const reply = await callLlmWithFallback(
         buildStagePrompt("external_evidence", { lastUserMessage: userMessage, allUserMessages }),
         EXTERNAL_EVIDENCE_FALLBACK
-      );
+      ,
+      messages
+    );
       return { session, chat: response(session, reply) };
     }
     // 用户答了，进第四步
@@ -234,6 +261,8 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     const reply = await callLlmWithFallback(
       buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
       REFERENCE_PEER_PROMPT
+    ,
+      messages
     );
     return { session, chat: response(session, reply) };
   }
@@ -245,7 +274,9 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       const reply = await callLlmWithFallback(
         buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
         REFERENCE_OUTSIDER_PROMPT
-      );
+      ,
+      messages
+    );
       return { session, chat: response(session, reply) };
     }
 
@@ -262,6 +293,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     const reply = await callLlmWithFallback(
       buildStagePrompt("quote_confirm", { lastUserMessage: userMessage, allUserMessages }),
       fallback,
+      messages,
       160
     );
     return {
