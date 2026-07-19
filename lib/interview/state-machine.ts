@@ -218,21 +218,35 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     return { session, chat: response(session, reply) };
   }
 
-  // external_evidence: v2.1 固定问句，她说"没有"换问
+  // external_evidence: v2.1 第三步——LLM 根据语境问，v2.1 原文当 fallback
   if (session.stage === "external_evidence") {
-    if (/没有|没|不记得/u.test(userMessage)) {
-      return { session, chat: response(session, EXTERNAL_EVIDENCE_FALLBACK) };
+    // 用户说"没有/没"，v2.1换问："那客人里、同事里…"
+    if (/^没有$|^没$|^没有呢$|^没呢$/u.test(userMessage)) {
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("external_evidence", { lastUserMessage: userMessage, allUserMessages }),
+        EXTERNAL_EVIDENCE_FALLBACK
+      );
+      return { session, chat: response(session, reply) };
     }
+    // 用户答了，进第四步
     session.stage = "reference_shift";
     session.referenceStep = 1;
-    return { session, chat: response(session, REFERENCE_PEER_PROMPT) };
+    const reply = await callLlmWithFallback(
+      buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
+      REFERENCE_PEER_PROMPT
+    );
+    return { session, chat: response(session, reply) };
   }
 
-  // reference_shift: v2.1 固定问句——两步走，只落一句
+  // reference_shift: v2.1 第四步——LLM 根据语境问两步，标配落语固定
   if (session.stage === "reference_shift") {
     if (session.referenceStep === 1) {
       session.referenceStep = 2;
-      return { session, chat: response(session, REFERENCE_OUTSIDER_PROMPT) };
+      const reply = await callLlmWithFallback(
+        buildStagePrompt("reference_shift", { lastUserMessage: userMessage, allUserMessages }),
+        REFERENCE_OUTSIDER_PROMPT
+      );
+      return { session, chat: response(session, reply) };
     }
 
     if (session.referenceStep === 2) {
@@ -240,7 +254,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, REFERENCE_SHIFT_LINE) };
     }
 
-    // step=3：她对"标配"做了反应，选原话确认
+    // step=3：选原话确认
     const quote = await selectQuoteWithContext(messages);
     session.stage = "quote_confirm";
     session.finalQuote = quote;
