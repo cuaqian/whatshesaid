@@ -281,20 +281,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     if (isAffirmative(userMessage)) {
       session.quoteConfirmed = true;
       session.stage = "mirror_back";
-      const polite = isPoliteAgreement(userMessage);
-      // 只在用户原话里真的有比喻（"像X一样/像X似的/仿佛/宛如/犹如"）时才追加那句
-      // "好像" 单独出现不算比喻（"好像找到答案了"不是比喻）
-      const quoteText = session.finalQuote ?? "";
-      const hasMetaphor =
-        /像.+一样/u.test(quoteText) ||
-        /像.+似的/u.test(quoteText) ||
-        /像.+般/u.test(quoteText) ||
-        /仿佛|宛如|犹如/u.test(quoteText);
-      let mirrorText = MIRROR_BACK_TEXT;
-      if (hasMetaphor) {
-        mirrorText += `\n\n${MIRROR_BACK_WITH_METAPHOR}`;
-      }
-      return { session, chat: response(session, mirrorText) };
+      return { session, chat: response(session, MIRROR_BACK_TEXT) };
     }
 
     if (isNegative(userMessage)) {
