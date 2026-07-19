@@ -10,7 +10,6 @@ import { MirrorBack } from "./MirrorBack";
 import { LandingScreen } from "./LandingScreen";
 
 const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
-const SESSION_KEY = "whatshesaid_session";
 
 const TOTAL_STAGES = 5;
 const STAGE_LABELS: Partial<Record<InterviewStage, string>> = {
@@ -41,20 +40,10 @@ export function ChatWindow() {
   const reset = useCallback(() => {
     setSessionId(null);
     setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
-    setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(false);
+    setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(true);
     mirrorQuoteRef.current = null;
-    try { window.localStorage.removeItem(SESSION_KEY); } catch { /* */ }
   }, []);
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(SESSION_KEY);
-      if (stored) {
-        setSessionId(stored);
-        setShowLanding(false); // 有进行中的对话，跳过入口
-      }
-    } catch { /* */ }
-  }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, showMirror]);
 
   async function sendMessage(content: string) {
@@ -66,13 +55,10 @@ export function ChatWindow() {
       setLoading(true);
       try {
         // 给后端发空消息，触发 mirror_back → end
-        let sid = sessionId;
-        try { const s = window.localStorage.getItem(SESSION_KEY); if (s) sid = s; } catch { /* */ }
-        const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sid, message: "继续" }) });
+        const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sessionId, message: "继续" }) });
         if (!r.ok) throw new Error("");
         const d = (await r.json()) as ChatResponse;
         setSessionId(d.sessionId); setEnded(d.ended); setStage(d.stage);
-        try { if (d.sessionId) window.localStorage.setItem(SESSION_KEY, d.sessionId); } catch { /* */ }
         if (d.ended) mirrorQuoteRef.current = null;
         setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply }]);
       } catch {
@@ -85,7 +71,6 @@ export function ChatWindow() {
     setLoading(true);
 
     let sid = sessionId;
-    try { const s = window.localStorage.getItem(SESSION_KEY); if (s) sid = s; } catch { /* */ }
 
     try {
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: sid, message: content }) });
@@ -101,8 +86,8 @@ export function ChatWindow() {
         setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
       } else {
         setQuoteCandidate(d.requiresConfirmation ? d.quoteCandidate : null);
-        try { if (d.sessionId) window.localStorage.setItem(SESSION_KEY, d.sessionId); } catch { /* */ }
-        setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
+
+      setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
       }
     } catch {
       setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: "我这边停一下。咱先说你手里这件事。" }]);
