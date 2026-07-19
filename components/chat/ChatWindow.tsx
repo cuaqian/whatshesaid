@@ -33,15 +33,14 @@ export function ChatWindow() {
   const [quoteCandidate, setQuoteCandidate] = useState<string | null>(null);
   const [showMirror, setShowMirror] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
+  const [finalQuote, setFinalQuote] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  // 记录第五步确认前最后一条原话，镜像屏用
-  const mirrorQuoteRef = useRef<string | null>(null);
 
   const reset = useCallback(() => {
     setSessionId(null);
     setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
     setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(true);
-    mirrorQuoteRef.current = null;
+    setFinalQuote(null);
   }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, showMirror]);
@@ -59,7 +58,7 @@ export function ChatWindow() {
         if (!r.ok) throw new Error("");
         const d = (await r.json()) as ChatResponse;
         setSessionId(d.sessionId); setEnded(d.ended); setStage(d.stage);
-        if (d.ended) mirrorQuoteRef.current = null;
+        if (d.ended) setFinalQuote(null);
         setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply }]);
       } catch {
         setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: "就到这。我没有存你任何一句话，不会让你留联系方式，也不给你推荐什么。你可以关掉了——也许你不用再回来。" }]);
@@ -80,14 +79,15 @@ export function ChatWindow() {
 
       // 第五步确认通过 → 进入镜面屏
       if (d.stage === "mirror_back" && d.reply.includes("这就是你做的事")) {
-        mirrorQuoteRef.current = d.quoteCandidate;
         setShowMirror(true);
-        // 返还原话也加进消息流
-        setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
+        setQuoteCandidate(null);  // 关键：清除 quoteCandidate，避免 QuoteConfirm 残留
+        setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply }]);
       } else {
         setQuoteCandidate(d.requiresConfirmation ? d.quoteCandidate : null);
-
-      setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
+        if (d.requiresConfirmation && d.quoteCandidate) {
+          setFinalQuote(d.quoteCandidate);
+        }
+        setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply, quoteCandidate: d.quoteCandidate }]);
       }
     } catch {
       setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: "我这边停一下。咱先说你手里这件事。" }]);
@@ -104,8 +104,8 @@ export function ChatWindow() {
   }
 
   // === 镜面屏 ===
-  if (showMirror && mirrorQuoteRef.current) {
-    return <MirrorBack quote={mirrorQuoteRef.current} onDone={() => sendMessage("继续")} />;
+  if (showMirror && finalQuote) {
+    return <MirrorBack quote={finalQuote} onDone={() => sendMessage("继续")} />;
   }
 
   return (
