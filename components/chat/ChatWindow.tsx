@@ -46,7 +46,7 @@ export function ChatWindow() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, showMirror]);
 
   async function sendMessage(content: string) {
-    if (loading || ended || showMirror) return;
+    if (loading || ended) return;
 
     // 镜面关闭后触发进入结束语
     if (stage === "mirror_back") {
