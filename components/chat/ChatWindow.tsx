@@ -24,8 +24,9 @@ function stageToIndex(stage: InterviewStage): number {
 
 export function ChatWindow() {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  // 进入对话后留空——开场白已经在引导页说过，重复出现反而让用户困惑
-  const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [messages, setMessages] = useState<UiMessage[]>([
+    { id: "initial", role: "assistant", content: INITIAL_MESSAGE }
+  ]);
   const [loading, setLoading] = useState(false);
   const [ended, setEnded] = useState(false);
   const [stage, setStage] = useState<InterviewStage>("opening");
@@ -37,7 +38,7 @@ export function ChatWindow() {
 
   const reset = useCallback(() => {
     setSessionId(null);
-    setMessages([]);
+    setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
     setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(true);
     setFinalQuote(null);
   }, []);
