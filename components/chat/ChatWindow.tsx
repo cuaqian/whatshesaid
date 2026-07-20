@@ -9,7 +9,7 @@ import { QuoteConfirm } from "./QuoteConfirm";
 import { MirrorBack } from "./MirrorBack";
 import { LandingScreen } from "./LandingScreen";
 
-const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
+const INITIAL_MESSAGE = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么，只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
 
 const TOTAL_STAGES = 5;
 const STAGE_LABELS: Partial<Record<InterviewStage, string>> = {

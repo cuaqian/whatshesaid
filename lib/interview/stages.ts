@@ -12,7 +12,7 @@ export const INTERVIEW_STAGES: InterviewStage[] = [
 ];
 
 // 固定开场（石悦原话）
-export const OPENING_TEXT = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么，只想听你讲一件你做过的事。你可以直接说话，也可以打字。我不会保存你的任何信息。可以吗？";
+export const OPENING_TEXT = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么，只想听你讲一件你做过的事。我不会保存你的任何信息。可以吗？";
 
 // 带回现场
 export const STORY_PROMPT = "你做过的事里，印象最深的是哪一段？带我回那一天——那时候几点开始、什么环境、跟谁一起、先做了什么？";
