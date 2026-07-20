@@ -21,25 +21,28 @@ function isRealization(candidate: string): boolean {
 }
 
 /**
- * 在用户最新消息中找自觉悟原话。
- * 优先看最近一条 message（换尺子之后她最有可能自己悟出 payoff 那一句），
- * 如果最近一条没有，去前面找第一个含 2 个以上 realization 关键词的句子。
+ * 在用户消息中找自觉悟原话。
+ * 从最新往前搜，但最后一条消息至少要有 2 个觉悟关键词才算（防止"复读"普通应答）。
+ * 前面消息含 1 个即可命中——那是她脱口而出、却轻轻带过的句子。
  */
 export function findRealizationQuote(messages: ChatMessage[]): string | null {
   const userMessages = messages.filter((message) => message.role === "user");
   if (userMessages.length === 0) return null;
 
-  // 从最新一条用户消息向前遍历
   for (let i = userMessages.length - 1; i >= 0; i--) {
     const candidates = splitIntoCandidates(userMessages[i].content);
-    // 选该条消息里含 realization 关键词最长的那个候选
     const ranked = candidates
       .map((c) => ({ c, hits: REALIZATION_HINTS.filter((h) => c.includes(h)).length }))
       .filter((x) => x.hits > 0)
       .sort((a, b) => b.hits - a.hits || b.c.length - a.c.length);
-    if (ranked.length > 0) {
-      return ranked[0].c;
+    if (ranked.length === 0) continue;
+
+    // 最后一条消息：至少 2 个觉悟关键词才算（防复读）
+    if (i === userMessages.length - 1 && ranked[0].hits < 2) {
+      continue;
     }
+
+    return ranked[0].c;
   }
   return null;
 }
@@ -93,6 +96,14 @@ export function pickQuoteCandidate(messages: ChatMessage[], exclude: string[] = 
   return extractQuoteCandidates(messages).find((candidate) => !exclude.includes(candidate)) ?? "你做过的事里，印象最深的是哪一段";
 }
 
+/**
+ * 严格校验：quote 必须是用户原文中的连续片段。
+ * uses `includes` 做子串匹配，但额外拒绝过短（<4字）和过长（>80字）的片段。
+ */
 export function isExactUserQuote(quote: string, messages: ChatMessage[]): boolean {
-  return messages.some((message) => message.role === "user" && message.content.includes(quote));
+  const cleaned = quote.trim().replace(/^['"「『]+|['"」』]+$/gu, "");
+  if (cleaned.length < 4 || cleaned.length > 80) return false;
+  return messages.some(
+    (message) => message.role === "user" && message.content.includes(cleaned)
+  );
 }

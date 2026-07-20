@@ -77,10 +77,11 @@ export function ChatWindow() {
       const d = (await r.json()) as ChatResponse;
       setSessionId(d.sessionId); setEnded(d.ended); setStage(d.stage);
 
-      // 第五步确认通过 → 进入镜面屏
-      if (d.stage === "mirror_back" && d.reply.includes("这就是你做的事")) {
+      // 第五步确认通过 → 进入镜面屏（用后端锁死的那句原话，不依赖前端 state）
+      if (d.stage === "mirror_back") {
+        setFinalQuote(d.quoteCandidate);
         setShowMirror(true);
-        setQuoteCandidate(null);  // 关键：清除 quoteCandidate，避免 QuoteConfirm 残留
+        setQuoteCandidate(null);
         setMessages((c) => [...c, { id: crypto.randomUUID(), role: "assistant", content: d.reply }]);
       } else {
         setQuoteCandidate(d.requiresConfirmation ? d.quoteCandidate : null);

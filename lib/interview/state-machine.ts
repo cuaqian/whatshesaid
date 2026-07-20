@@ -307,12 +307,12 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     if (isAffirmative(userMessage)) {
       session.quoteConfirmed = true;
       session.stage = "mirror_back";
-      // v2.1: 若原话含具体比喻（"像X一样/像X似的"），顺着词点一句
       const quoteText = session.finalQuote ?? "";
       const hasMetaphor = /像.+一样|像.+似的|像.+般|仿佛|宛如|犹如/u.test(quoteText);
+      const mirrorText = hasMetaphor ? `${MIRROR_BACK_TEXT}\n\n${MIRROR_BACK_WITH_METAPHOR}` : MIRROR_BACK_TEXT;
       return {
         session,
-        chat: response(session, hasMetaphor ? `${MIRROR_BACK_TEXT}\n\n${MIRROR_BACK_WITH_METAPHOR}` : MIRROR_BACK_TEXT)
+        chat: response(session, mirrorText, { quoteCandidate: session.finalQuote })
       };
     }
 
