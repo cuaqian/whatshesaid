@@ -113,7 +113,7 @@ export function ChatInput({ disabled, onSend }: Props) {
 
         <textarea
           className="max-h-28 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-1.5 text-[15px] leading-relaxed text-[#3a2e28] placeholder-[#c4b8ad] outline-none"
-          placeholder={listening ? "正在听……" : "打字或语音说话"}
+          placeholder={listening ? "正在听……" : "说一句话开始"}
           rows={1}
           value={value}
           disabled={disabled}

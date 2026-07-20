@@ -24,9 +24,8 @@ function stageToIndex(stage: InterviewStage): number {
 
 export function ChatWindow() {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<UiMessage[]>([
-    { id: "initial", role: "assistant", content: INITIAL_MESSAGE }
-  ]);
+  // 进入对话后留空——开场白已经在引导页说过，重复出现反而让用户困惑
+  const [messages, setMessages] = useState<UiMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [ended, setEnded] = useState(false);
   const [stage, setStage] = useState<InterviewStage>("opening");
@@ -38,7 +37,7 @@ export function ChatWindow() {
 
   const reset = useCallback(() => {
     setSessionId(null);
-    setMessages([{ id: "initial", role: "assistant", content: INITIAL_MESSAGE }]);
+    setMessages([]);
     setEnded(false); setStage("opening"); setQuoteCandidate(null); setShowMirror(false); setShowLanding(true);
     setFinalQuote(null);
   }, []);
@@ -110,7 +109,7 @@ export function ChatWindow() {
   }
 
   return (
-    <main className="mx-auto flex h-[100dvh] w-full flex-col relative z-10 sm:max-w-lg md:max-w-xl lg:max-w-2xl lg:border-x lg:border-[#e8ddd1]/50">
+    <main className="mx-auto flex h-[100dvh] w-full flex-col relative z-10 sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl lg:border-x lg:border-[#e8ddd1]/50">
       {/* header */}
       <header className="px-5 sm:px-8 pt-6 pb-4 lg:pt-10">
         <div className="flex items-end justify-between">

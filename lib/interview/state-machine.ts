@@ -162,8 +162,8 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     if (!userMessage) {
       return { session, chat: response(session, OPENING_TEXT) };
     }
-    // 用户回应了"可以吗"，模型生成 story 阶段的问题
-    const fallback = "你做过的事里，印象最深的是哪一段？带我回那一天——几点开始、什么环境、跟谁一起、先干了什么？";
+    // 用户已同意（开场白在引导页展示过），模型生成 story 阶段的问题
+    const fallback = "说一件你最近做过、当时挺花心思的具体的事——带我回那一天：那时候你几点开始、什么环境、跟谁一起、先做了什么？";
     const reply = await callLlmWithFallback(
       buildStagePrompt("story", { lastUserMessage: userMessage, allUserMessages }),
       fallback,
