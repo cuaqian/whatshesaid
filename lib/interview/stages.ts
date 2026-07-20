@@ -15,20 +15,20 @@ export const INTERVIEW_STAGES: InterviewStage[] = [
 export const OPENING_TEXT = "我在做一个帮女性看见自己价值的东西。今天我不问你要什么，只想听你讲一件你做过的事。你可以直接说话，也可以打字。我不会保存你的任何信息。可以吗？";
 
 // 带回现场
-export const STORY_PROMPT = "你做过的事里，印象最深的是哪一段？带我回那一天——那时候几点开始、什么环境、跟谁一起、先干啥？";
+export const STORY_PROMPT = "你做过的事里，印象最深的是哪一段？带我回那一天——那时候几点开始、什么环境、跟谁一起、先做了什么？";
 
 // 岔开时拽回
 export const FALLBACK_FOCUS = "咱先说你手里这件事。";
 
 // 被指定的证据
-export const EXTERNAL_EVIDENCE_PROMPT = "哪个老板主动留过你、或者给你涨过钱、提前给你转正？他图你啥？";
+export const EXTERNAL_EVIDENCE_PROMPT = "哪个老板主动留过你、或者给你涨过钱、提前给你转正？他图你什么？";
 
 export const EXTERNAL_EVIDENCE_FALLBACK = "那客人里、同事里、老板嘴里，有没有谁说过你哪点好、老爱找你的？";
 
 // 换尺子（两步，慢）
 export const REFERENCE_PEER_PROMPT = "你身边干同样活的人，是不是都这样？";
 
-export const REFERENCE_OUTSIDER_PROMPT = "那换一个从没干过的人来，今晚让她顶你这个班，会咋样？";
+export const REFERENCE_OUTSIDER_PROMPT = "那换一个从没干过的人来，今晚让她顶你这个班，会怎样？";
 
 // 换尺子收束——不替她命名，不举例，不上课
 export const REFERENCE_SHIFT_LINE = "所以在那个圈子里，这是标配，你才看不见它。你一直站在一堆跟你一样的人里，量你自己。";
@@ -54,7 +54,7 @@ export const DEMO_SCRIPT: { role: "user" | "assistant"; content: string; delay?:
   },
   {
     role: "assistant",
-    content: '你刚说的「排版」，具体咋弄的？出过岔子吗？',
+    content: '你刚说的「排版」，具体怎么做的？出过岔子吗？',
     delay: 2000
   },
   {

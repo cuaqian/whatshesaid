@@ -39,7 +39,7 @@ function response(session: InterviewSession, reply: string, options: Partial<Cha
 function isShortOrDeflecting(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length <= 6) return true;
-  if (/^(不知道|忘了|想不起来|没啥|没了|没了啊|没)$/u.test(trimmed)) return true;
+  if (/^(不知道|忘了|想不起来|没什么|没了|没了啊|没)$/u.test(trimmed)) return true;
   if (/^(随便|不清楚|记不清|不记得|没注意|没印象)$/u.test(trimmed)) return true;
   if (/^.{1,4}[呀啊嗯哈哦呢]$/u.test(trimmed)) return true; // "自己想好的词呀"
   return false;
@@ -163,7 +163,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
       return { session, chat: response(session, OPENING_TEXT) };
     }
     // 用户回应了"可以吗"，模型生成 story 阶段的问题
-    const fallback = "你做过的事里，印象最深的是哪一段？带我回那一天——几点开始、什么环境、跟谁一起、先干啥？";
+    const fallback = "你做过的事里，印象最深的是哪一段？带我回那一天——几点开始、什么环境、跟谁一起、先干了什么？";
     const reply = await callLlmWithFallback(
       buildStagePrompt("story", { lastUserMessage: userMessage, allUserMessages }),
       fallback,
@@ -177,7 +177,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     session.stage = "keyword_followup";
     session.followupCount = 1;
     const keyword = await extractKeyword(userMessage);
-    const fallback = `你刚说的"${keyword}"，具体咋弄的？`;
+    const fallback = `你刚说的"${keyword}"，具体怎么做的？`;
     const reply = await callLlmWithFallback(
       buildStagePrompt("keyword_followup", {
         lastUserMessage: userMessage,
@@ -213,7 +213,7 @@ export async function advanceInterview(input: AdvanceInterviewInput): Promise<{ 
     if (session.followupCount < 2) {
       session.followupCount += 1;
       const keyword = await extractKeyword(userMessage);
-      const fallback = `那具体咋办的？`;
+      const fallback = `那具体怎么做的？`;
       const reply = await callLlmWithFallback(
         buildStagePrompt("keyword_followup", {
           lastUserMessage: userMessage,
