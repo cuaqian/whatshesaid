@@ -19,10 +19,11 @@
 
 html,
 body {
-  min-height: 100%;
+  min-height: 100dvh;
   background: var(--bg-warm);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 body {

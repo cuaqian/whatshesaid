@@ -109,7 +109,7 @@ export function ChatWindow() {
   }
 
   return (
-    <main className="mx-auto flex h-[100dvh] w-full flex-col relative z-10 sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl lg:border-x lg:border-[#e8ddd1]/50">
+    <main className="mx-auto flex h-[100dvh] w-full flex-col relative z-10 sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-5xl lg:border-x lg:border-[#e8ddd1]/50">
       {/* header */}
       <header className="px-5 sm:px-8 pt-6 pb-4 lg:pt-10">
         <div className="flex items-end justify-between">
